@@ -17,15 +17,21 @@ Arena::~Arena() {
   }
 }
 
+
+// ZYJ 当分配内存请求到来时，检查当前Block是否能容纳。如果能容纳，则从当前block分配。
+// 如果不能容纳，那么则分配新block： 如果分配请求的内存>1kb，那么则分配请求内存大小的block，
+// 给他独占；否则则新建block，需求满足后，剩余内存供下次分配使用。 所以每个block看上去最多浪费1kb
+// 看上去内存只分配不销毁。
 char* Arena::AllocateFallback(size_t bytes) {
   if (bytes > kBlockSize / 4) {
     // Object is more than a quarter of our block size.  Allocate it separately
     // to avoid wasting too much space in leftover bytes.
-    char* result = AllocateNewBlock(bytes);
+    char* result = AllocateNewBlock(bytes); // ZYJ 如果待分配的内存大于1KB，那么直接分配这么大的内存，而不是分配block
     return result;
   }
 
   // We waste the remaining space in the current block.
+  // ZYJ 如果待分配的内存< 1KB，则分配整个block
   alloc_ptr_ = AllocateNewBlock(kBlockSize);
   alloc_bytes_remaining_ = kBlockSize;
 
@@ -58,6 +64,7 @@ char* Arena::AllocateAligned(size_t bytes) {
 char* Arena::AllocateNewBlock(size_t block_bytes) {
   char* result = new char[block_bytes];
   blocks_.push_back(result);
+  // ZYJ 因为vector里push back了一个指针，所以要加上sizeof(char*) ?
   memory_usage_.fetch_add(block_bytes + sizeof(char*),
                           std::memory_order_relaxed);
   return result;

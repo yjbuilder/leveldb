@@ -7,7 +7,7 @@
 
 // Thread safety
 // -------------
-//
+// ZYJ 写线程不安全，需要外部自行同步化； 读线程安全
 // Writes require external synchronization, most likely a mutex.
 // Reads require a guarantee that the SkipList will not be destroyed
 // while the read is in progress.  Apart from that, reads progress
@@ -129,6 +129,7 @@ class SkipList {
 
   // Immutable after construction
   Comparator const compare_;
+  // ZYJ  Arena其实就是个内存池
   Arena* const arena_;  // Arena used for allocations of nodes
 
   Node* const head_;
@@ -183,6 +184,7 @@ typename SkipList<Key, Comparator>::Node* SkipList<Key, Comparator>::NewNode(
     const Key& key, int height) {
   char* const node_memory = arena_->AllocateAligned(
       sizeof(Node) + sizeof(std::atomic<Node*>) * (height - 1));
+  // ZYJ 用placement new就可以方便用内存池啦
   return new (node_memory) Node(key);
 }
 
@@ -269,6 +271,7 @@ SkipList<Key, Comparator>::FindGreaterOrEqual(const Key& key,
       // Keep searching in this list
       x = next;
     } else {
+      // ZYJ prev保存的是每层 待查找Node的前一个Node
       if (prev != nullptr) prev[level] = x;
       if (level == 0) {
         return next;
@@ -338,11 +341,15 @@ void SkipList<Key, Comparator>::Insert(const Key& key) {
   // TODO(opt): We can use a barrier-free variant of FindGreaterOrEqual()
   // here since Insert() is externally synchronized.
   Node* prev[kMaxHeight];
+  // ZYJ 返回的Node可能与key相等，也可能大于key(key不存在的情况)
+  // 返回的prev，表示每层比x小的前一个节点
+  // 这里的跳表其实是倒着的。即索引在下面，数据在上面
   Node* x = FindGreaterOrEqual(key, prev);
 
   // Our data structure does not allow duplicate insertion
   assert(x == nullptr || !Equal(key, x->key));
 
+  // ZYJ 一定概率进行树的增长
   int height = RandomHeight();
   if (height > GetMaxHeight()) {
     for (int i = GetMaxHeight(); i < height; i++) {

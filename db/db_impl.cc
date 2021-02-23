@@ -1198,16 +1198,19 @@ Status DBImpl::Delete(const WriteOptions& options, const Slice& key) {
 }
 
 Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
+
   Writer w(&mutex_);
   w.batch = updates;
   w.sync = options.sync;
   w.done = false;
 
+  // 1. 上锁
   MutexLock l(&mutex_);
   writers_.push_back(&w);
-  while (!w.done && &w != writers_.front()) {
+  while (!w.done && &w != writers_.front()) { // 未写入&&未即将被写入
     w.cv.Wait();
   }
+  // 如果已写入，返回写入结果
   if (w.done) {
     return w.status;
   }
@@ -1493,6 +1496,7 @@ Status DB::Open(const Options& options, const std::string& dbname, DB** dbptr) {
     // Create new log and a corresponding memtable.
     uint64_t new_log_number = impl->versions_->NewFileNumber();
     WritableFile* lfile;
+    // ZYJ create new file
     s = options.env->NewWritableFile(LogFileName(dbname, new_log_number),
                                      &lfile);
     if (s.ok()) {

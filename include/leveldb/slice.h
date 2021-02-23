@@ -24,6 +24,7 @@
 
 namespace leveldb {
 
+// ZYJ just a string
 class LEVELDB_EXPORT Slice {
  public:
   // Create an empty slice.

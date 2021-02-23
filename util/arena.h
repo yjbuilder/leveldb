@@ -13,6 +13,11 @@
 
 namespace leveldb {
 
+// ZYJ 当分配内存请求到来时，检查当前Block是否能容纳。如果能容纳，则从当前block分配。
+// 如果不能容纳，那么则分配新block： 如果分配请求的内存>1kb，那么则分配请求内存大小的block，
+// 给他独占；否则则新建block，需求满足后，剩余内存供下次分配使用。 所以每个block看上去最多浪费1kb
+// 看上去内存只分配不销毁。
+
 class Arena {
  public:
   Arena();
