@@ -843,6 +843,7 @@ class SingletonEnv {
                   "env_storage_ will not fit the Env");
     static_assert(alignof(decltype(env_storage_)) >= alignof(EnvType),
                   "env_storage_ does not meet the Env's alignment needs");
+    // ZYJ placement new
     new (&env_storage_) EnvType();
   }
   ~SingletonEnv() = default;
@@ -859,6 +860,8 @@ class SingletonEnv {
   }
 
  private:
+  // ZYJ in fact, aligned_storage just make a pod type, which occupies space of size w
+  // so when define a variable with this type， IT it a memory of size w.
   typename std::aligned_storage<sizeof(EnvType), alignof(EnvType)>::type
       env_storage_;
 #if !defined(NDEBUG)
@@ -868,9 +871,11 @@ class SingletonEnv {
 
 #if !defined(NDEBUG)
 template <typename EnvType>
+// ZYJ SingletonEnv::env_initialized_ is a static member. here is just to make a definition
 std::atomic<bool> SingletonEnv<EnvType>::env_initialized_;
 #endif  // !defined(NDEBUG)
 
+// ZYJ new using in c++11.  It's an type alias.
 using PosixDefaultEnv = SingletonEnv<PosixEnv>;
 
 }  // namespace
